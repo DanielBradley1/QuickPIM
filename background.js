@@ -103,10 +103,78 @@ async function getPimRoles() {
       throw new Error(`API call failed: ${response.status} ${response.statusText}`);
     }
     
-    return await response.json();
+    const data = await response.json();
+    
+    // Resolve role definition names
+    if (data.value && data.value.length > 0) {
+      const roleDefinitions = await getRoleDefinitions(graphToken);
+      
+      // Map role definition IDs to friendly names
+      data.value = data.value.map(role => {
+        if (role.roleDefinitionId && roleDefinitions[role.roleDefinitionId]) {
+          role.roleName = roleDefinitions[role.roleDefinitionId];
+        }
+        return role;
+      });
+    }
+    
+    return data;
   } catch (error) {
     console.error('Error getting PIM roles:', error);
     throw error;
+  }
+}
+
+// Cache for role definitions
+let roleDefinitionsCache = null;
+let roleDefinitionsCacheTime = null;
+
+// Function to get role definitions
+async function getRoleDefinitions(token) {
+  // Check if we have a recent cache (less than 1 hour old)
+  if (roleDefinitionsCache && roleDefinitionsCacheTime && 
+      (Date.now() - roleDefinitionsCacheTime) < 3600000) {
+    console.log('Using cached role definitions');
+    return roleDefinitionsCache;
+  }
+  
+  console.log('Fetching role definitions from Graph API');
+  try {
+    const response = await fetch(
+      'https://graph.microsoft.com/v1.0/roleManagement/directory/roleDefinitions', 
+      {
+        method: "GET",
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    
+    if (!response.ok) {
+      throw new Error(`Role definitions API call failed: ${response.status} ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    
+    // Create a mapping of role definition ID to display name
+    const roleDefinitions = {};
+    if (data.value) {
+      data.value.forEach(role => {
+        if (role.id && role.displayName) {
+          roleDefinitions[role.id] = role.displayName;
+        }
+      });
+    }
+    
+    // Update the cache
+    roleDefinitionsCache = roleDefinitions;
+    roleDefinitionsCacheTime = Date.now();
+    
+    return roleDefinitions;
+  } catch (error) {
+    console.error('Error fetching role definitions:', error);
+    return {}; // Return empty object on error
   }
 }
 

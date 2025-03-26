@@ -126,20 +126,14 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
       data.value.forEach(role => {
         const roleElement = document.createElement('div');
-        roleElement.className = 'role-item';
+        roleElement.className = 'role-item compact';
         
-        // Find the best display name for the role
+        // Use the resolved friendly name if available, otherwise fallback to other properties
         const roleName = role.roleName || role.roleDefinitionDisplayName || 
                           role.roleDefinitionId || 'Unknown Role';
         
         roleElement.innerHTML = `
           <div class="role-title">${escapeHTML(roleName)}</div>
-          <div class="role-details">
-            <div><strong>Status:</strong> ${escapeHTML(role.status || 'Unknown')}</div>
-            <div><strong>Role ID:</strong> ${escapeHTML(role.roleDefinitionId || 'Unknown')}</div>
-            ${role.principalId ? `<div><strong>Principal ID:</strong> ${escapeHTML(role.principalId)}</div>` : ''}
-            ${role.scheduleInfo ? `<div><strong>Duration:</strong> ${escapeHTML(role.scheduleInfo.expiration?.duration || 'Not specified')}</div>` : ''}
-          </div>
         `;
         
         rolesList.appendChild(roleElement);
