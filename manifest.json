@@ -1,7 +1,7 @@
 {
-  "name": "Entra PIM Role Viewer",
-  "version": "1.0",
-  "description": "View your eligible Entra PIM roles",
+  "name": "QuickPIM",
+  "version": "0.1",
+  "description": "Quickly view, select and activate multiple PIM roles at once.",
   "manifest_version": 3,
   "permissions": [
     "storage",
