@@ -1,0 +1,22 @@
+{
+  "name": "Entra PIM Role Viewer",
+  "version": "1.0",
+  "description": "View your eligible Entra PIM roles",
+  "manifest_version": 3,
+  "permissions": [
+    "storage",
+    "webRequest"
+  ],
+  "host_permissions": [
+    "https://graph.microsoft.com/*",
+    "https://*.microsoft.com/*",
+    "https://*.microsoftonline.com/*",
+    "https://*.windows.net/*"
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  }
+}

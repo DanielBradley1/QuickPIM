@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Entra PIM Role Viewer</title>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Entra PIM Role Viewer</h1>
+    
+    <div id="status-bar">
+      <span id="status-message">Loading...</span>
+      <button id="refresh-button">Refresh</button>
+    </div>
+    
+    <div id="token-status-container">
+      <div id="token-status" class="info-box"></div>
+    </div>
+    
+    <div id="no-token-view" class="hidden">
+      <p>No access token found. To use this extension:</p>
+      <ol>
+        <li>Sign in to a Microsoft service like <a href="https://portal.azure.com" target="_blank">Azure Portal</a> or <a href="https://admin.microsoft.com" target="_blank">Microsoft 365 Admin Center</a></li>
+        <li>Navigate around in the portal to ensure Microsoft Graph API calls are made</li>
+        <li>Return to this extension and click "Refresh"</li>
+      </ol>
+      
+      <details>
+        <summary>Manual Token Input</summary>
+        <div class="manual-token-input">
+          <p>If you have a Microsoft Graph access token, you can enter it here:</p>
+          <textarea id="manual-token" rows="5" placeholder="Paste your access token here (without the 'Bearer' prefix)"></textarea>
+          <button id="save-token-button" class="btn-secondary">Save Token</button>
+          <p class="token-tip">
+            <small>Tip: You can find a token by opening browser DevTools (F12), 
+                  going to Network tab, filtering for "graph.microsoft.com", 
+                  and viewing the "Authorization" request header.</small>
+          </p>
+        </div>
+      </details>
+    </div>
+    
+    <div id="roles-container" class="hidden">
+      <h2>Your Eligible PIM Roles</h2>
+      <div id="roles-list"></div>
+    </div>
+    
+    <div id="error-container" class="hidden">
+      <p class="error-message">An error occurred:</p>
+      <p id="error-details"></p>
+    </div>
+    
+    <div class="footer">
+      <button id="clear-token-button" class="btn-text">Clear Token</button>
+    </div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>
