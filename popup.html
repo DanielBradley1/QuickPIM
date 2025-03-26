@@ -7,7 +7,8 @@
 </head>
 <body>
   <div class="container">
-    <h1>Entra PIM Role Viewer</h1>
+    <h1>Quick PIM</h1>
+    <p class="subheading">A multi-role PIM activator by <a href="https://www.linkedin.com/in/danielbradley2/" target="_blank">Daniel Bradley</a></p>
     
     <div id="status-bar">
       <span id="status-message">Loading...</span>
@@ -44,6 +45,36 @@
     <div id="roles-container" class="hidden">
       <h2>Your Eligible PIM Roles</h2>
       <div id="roles-list"></div>
+      
+      <div class="activation-section">
+        <h3>Role Activation</h3>
+        
+        <div class="control-group">
+          <label for="duration-slider">Duration (hours): <span id="duration-value">1</span></label>
+          <input type="range" id="duration-slider" min="0" max="8" step="0.5" value="1" class="slider">
+        </div>
+        
+        <div class="control-group">
+          <label for="justification-text">Justification:</label>
+          <textarea id="justification-text" placeholder="Enter your reason for role activation" rows="3"></textarea>
+        </div>
+        
+        <div class="ticket-info-container">
+          <div class="control-group half">
+            <label for="ticket-system">Ticket System:</label>
+            <input type="text" id="ticket-system" placeholder="e.g. ServiceNow, Jira" class="text-input">
+          </div>
+          
+          <div class="control-group half">
+            <label for="ticket-number">Ticket Number:</label>
+            <input type="text" id="ticket-number" placeholder="e.g. INC12345678" class="text-input">
+          </div>
+        </div>
+        
+        <div class="control-group">
+          <button id="activate-button" class="btn-primary">Activate</button>
+        </div>
+      </div>
     </div>
     
     <div id="error-container" class="hidden">
@@ -55,6 +86,7 @@
       <button id="clear-token-button" class="btn-text">Clear Token</button>
     </div>
   </div>
+  <script src="activation.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>
