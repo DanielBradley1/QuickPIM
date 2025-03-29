@@ -1,21 +1,20 @@
-<p align="center">
-  <img src="img/quickpim-logo.png" alt="QuickPIM Logo" width="200">
-</p>
-
 # QuickPIM
 
-A Chrome extension that allows you to activate multiple PIM (Privileged Identity Management) roles simultaneously in Microsoft Entra.
+![X (formerly Twitter) Follow](https://img.shields.io/twitter/follow/DanielatOCN)
+[![LinkedIn: Daniel Bradley](https://img.shields.io/badge/LinkedIn-Daniel%20Bradley-blue?style=flat-square&logo=linkedin)](https://www.linkedin.com/in/danielbradley2/) 
+[![Website](https://img.shields.io/badge/Blog-Our%20Cloud%20Network-orange?style=flat-square&logo=internet-explorer)](https://ourcloudnetwork.com/)
 
-[![Author: Daniel Bradley](https://img.shields.io/badge/Author-Daniel%20Bradley-blue?style=flat-square&logo=linkedin)](https://www.linkedin.com/in/danielbradley2/) 
-[![Website](https://img.shields.io/badge/Website-Our%20Cloud%20Network-orange?style=flat-square&logo=internet-explorer)](https://ourcloudnetwork.com/)
+A Chrome extension that allows you to activate multiple PIM (Privileged Identity Management) roles simultaneously in Microsoft Entra.
 
 ## Overview
 
 QuickPIM streamlines the process of activating multiple PIM roles in Azure AD. Instead of activating each role individually, this extension allows you to select and activate multiple roles at once, saving time and reducing administrative overhead.
 
-<p align="center">
-  <img src="img/QuickPIM1.png" alt="QuickPIM Interface" width="600">
+<p align="left">
+  <img src="preview/QuickPIM1.png" alt="QuickPIM Interface" width="600">
 </p>
+
+It works by obtaining a bearer token from the header of your browser's requests to Microsoft Graph. It then stores that token within your Chrome storage and uses it to obtain and activate your selected PIM roles.
 
 ## Features
 
