@@ -13,8 +13,18 @@
     "https://*.microsoftonline.com/*",
     "https://*.windows.net/*"
   ],
+  "icons": {
+    "16": "img/QuickPim16.png",
+    "48": "img/QuickPim48.png",
+    "128": "img/QuickPim128.png"
+  },
   "action": {
-    "default_popup": "popup.html"
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "img/QuickPim16.png",
+      "48": "img/QuickPim48.png",
+      "128": "img/QuickPim128.png"
+    }
   },
   "background": {
     "service_worker": "background.js"
