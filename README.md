@@ -30,9 +30,9 @@ It works by obtaining a bearer token from the header of your browser's requests 
 1. Visit the [QuickPIM extension page](https://chrome.google.com/webstore/detail/quickpim/[extension-id]) on the Chrome Web Store (***waiting approval***)
 2. Click "Add to Chrome"
 3. Confirm the installation when prompted
-
+https://github.com/DanielBradley1/MiToken
 ### Manual Installation
-1. Download the latest release from the [Releases page](https://github.com/[username]/QuickPIM/releases)
+1. Download the latest release from the [Releases page](https://github.com/DanielBradley1/QuickPIM/releases)
 2. Open Chrome and navigate to `chrome://extensions/`
 3. Enable "Developer mode" in the top right
 4. Click "Load unpacked" and select the downloaded extension folder
