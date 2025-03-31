@@ -1,6 +1,6 @@
 {
   "name": "QuickPIM",
-  "version": "0.1",
+  "version": "0.2",
   "description": "Quickly view, select and activate multiple PIM roles at once.",
   "manifest_version": 3,
   "permissions": [

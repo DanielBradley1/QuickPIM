@@ -1,5 +1,8 @@
 console.log('Entra PIM Role Viewer background script loaded');
 
+// Import tokenDecoder.js
+importScripts('tokenDecoder.js');
+
 // Listen for web requests to Microsoft Graph API
 chrome.webRequest.onBeforeRequest.addListener(
   function(details) {
@@ -87,9 +90,18 @@ async function getPimRoles() {
     
     console.log('Using captured token to fetch PIM roles');
     
-    // Call the PIM roles endpoint
+    // Extract principalId from token using the decoder function
+    const principalId = extractPrincipalId(graphToken);
+    
+    if (!principalId) {
+      throw new Error('Could not extract user ID from token. Please refresh your session.');
+    }
+    
+    console.log('Using principalId:', principalId);
+    
+    // Call the PIM roles endpoint with the extracted principalId
     const response = await fetch(
-      'https://graph.microsoft.com/v1.0/roleManagement/directory/roleEligibilityScheduleRequests/filterByCurrentUser(on=\'principal\')', 
+      `https://graph.microsoft.com/beta/roleManagement/directory/roleEligibilitySchedules?$filter=principalId eq '${principalId}'`, 
       {
         method: "GET",
         headers: {
