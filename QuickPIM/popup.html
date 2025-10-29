@@ -9,7 +9,13 @@
   <div class="container">
     <h1>Quick PIM</h1>
     <p class="subheading">A multi-role PIM activator by <a href="https://www.linkedin.com/in/danielbradley2/" target="_blank">Daniel Bradley</a></p>
-    
+
+    <!-- Tab Navigation -->
+    <div class="tab-container">
+      <button class="tab-button active" data-tab="eligible">Eligible Roles</button>
+      <button class="tab-button" data-tab="active">Active Roles</button>
+    </div>
+
     <div id="status-bar">
       <span id="status-message">Loading...</span>
       <button id="refresh-button">Refresh</button>
@@ -44,6 +50,21 @@
     
     <div id="roles-container" class="hidden">
       <h2>Your Eligible PIM Roles</h2>
+
+      <!-- Search and Filter Section -->
+      <div id="search-filter-section" class="search-section">
+        <div class="search-container">
+          <input type="text" id="role-search" placeholder="🔍 Search roles by name or scope..." class="search-input">
+          <button id="clear-search" class="btn-clear-search hidden">✕</button>
+        </div>
+        <div class="filter-chips">
+          <button class="filter-chip active" data-filter="all">All</button>
+          <button class="filter-chip" data-filter="directory">🔐 Entra ID</button>
+          <button class="filter-chip" data-filter="azureResource">☁️ Azure Resource</button>
+        </div>
+        <div id="search-results-count" class="search-results-count hidden"></div>
+      </div>
+
       <div id="roles-list"></div>
       
       <div class="activation-section">
@@ -76,7 +97,13 @@
         </div>
       </div>
     </div>
-    
+
+    <!-- Active Roles View -->
+    <div id="active-roles-container" class="hidden">
+      <h2>Currently Active Roles</h2>
+      <div id="active-roles-list"></div>
+    </div>
+
     <div id="error-container" class="hidden">
       <p class="error-message">An error occurred:</p>
       <p id="error-details"></p>
