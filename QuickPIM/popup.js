@@ -21,7 +21,24 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Add activation button element
   const activateButton = document.getElementById('activate-button');
-  
+
+  // Search and filter elements
+  const roleSearch = document.getElementById('role-search');
+  const clearSearchBtn = document.getElementById('clear-search');
+  const searchResultsCount = document.getElementById('search-results-count');
+  const filterChips = document.querySelectorAll('.filter-chip');
+
+  // Tab navigation elements
+  const tabButtons = document.querySelectorAll('.tab-button');
+  const activeRolesContainer = document.getElementById('active-roles-container');
+  const activeRolesList = document.getElementById('active-roles-list');
+
+  // State for search and filter
+  let currentSearchTerm = '';
+  let currentFilter = 'all';
+  let currentTab = 'eligible';
+  let activeRolesInterval = null;
+
   // Initialize by checking token status and loading roles if token exists
   init();
   
@@ -66,7 +83,63 @@ document.addEventListener('DOMContentLoaded', function() {
   durationSlider.addEventListener('input', function() {
     durationValue.textContent = durationSlider.value;
   });
-  
+
+  // Search input event listener
+  roleSearch.addEventListener('input', function(e) {
+    currentSearchTerm = e.target.value.toLowerCase().trim();
+
+    // Show/hide clear button
+    if (currentSearchTerm) {
+      clearSearchBtn.classList.remove('hidden');
+    } else {
+      clearSearchBtn.classList.add('hidden');
+    }
+
+    filterRoles();
+  });
+
+  // Clear search button
+  clearSearchBtn.addEventListener('click', function() {
+    roleSearch.value = '';
+    currentSearchTerm = '';
+    clearSearchBtn.classList.add('hidden');
+    filterRoles();
+    roleSearch.focus();
+  });
+
+  // Filter chip event listeners
+  filterChips.forEach(chip => {
+    chip.addEventListener('click', function() {
+      // Remove active class from all chips
+      filterChips.forEach(c => c.classList.remove('active'));
+
+      // Add active class to clicked chip
+      this.classList.add('active');
+
+      // Update current filter
+      currentFilter = this.dataset.filter;
+
+      filterRoles();
+    });
+  });
+
+  // Keyboard shortcut: Ctrl+F to focus search
+  document.addEventListener('keydown', function(e) {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+      e.preventDefault();
+      roleSearch.focus();
+      roleSearch.select();
+    }
+  });
+
+  // Tab switching event listeners
+  tabButtons.forEach(button => {
+    button.addEventListener('click', function() {
+      const targetTab = this.dataset.tab;
+      switchTab(targetTab);
+    });
+  });
+
   // Add activation button event listener
   activateButton.addEventListener('click', function() {
     const selectedRoles = getSelectedRoles();
@@ -458,5 +531,322 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     return selectedRoles;
+  }
+
+  // Filter roles based on search term and filter type
+  function filterRoles() {
+    const allRoleItems = document.querySelectorAll('.role-item');
+    let visibleCount = 0;
+    let totalCount = allRoleItems.length;
+
+    allRoleItems.forEach(roleItem => {
+      const roleType = roleItem.dataset.roleType;
+      const roleTitleElement = roleItem.querySelector('.role-title');
+      const roleScopeElement = roleItem.querySelector('.role-scope');
+
+      const roleName = roleTitleElement ? roleTitleElement.textContent.toLowerCase() : '';
+      const roleScope = roleScopeElement ? roleScopeElement.textContent.toLowerCase() : '';
+
+      // Check filter type
+      let matchesFilter = true;
+      if (currentFilter === 'directory') {
+        matchesFilter = roleType === 'directory';
+      } else if (currentFilter === 'azureResource') {
+        matchesFilter = roleType === 'azureResource';
+      }
+
+      // Check search term
+      let matchesSearch = true;
+      if (currentSearchTerm) {
+        matchesSearch = roleName.includes(currentSearchTerm) || roleScope.includes(currentSearchTerm);
+      }
+
+      // Show/hide based on both criteria
+      const shouldShow = matchesFilter && matchesSearch;
+      roleItem.style.display = shouldShow ? '' : 'none';
+
+      if (shouldShow) {
+        visibleCount++;
+      }
+    });
+
+    // Update results count
+    updateSearchResultsCount(visibleCount, totalCount);
+
+    // Show/hide "no results" message
+    updateNoResultsMessage(visibleCount);
+  }
+
+  // Update search results count display
+  function updateSearchResultsCount(visible, total) {
+    if (currentSearchTerm || currentFilter !== 'all') {
+      searchResultsCount.textContent = `Showing ${visible} of ${total} roles`;
+      searchResultsCount.classList.remove('hidden');
+    } else {
+      searchResultsCount.classList.add('hidden');
+    }
+  }
+
+  // Show "no results" message if all roles are hidden
+  function updateNoResultsMessage(visibleCount) {
+    // Remove existing no-results message if any
+    const existingMessage = rolesList.querySelector('.no-results-message');
+    if (existingMessage) {
+      existingMessage.remove();
+    }
+
+    // Add no-results message if needed
+    if (visibleCount === 0 && (currentSearchTerm || currentFilter !== 'all')) {
+      const noResultsDiv = document.createElement('div');
+      noResultsDiv.className = 'no-results-message';
+      noResultsDiv.innerHTML = `
+        <div class="icon">🔍</div>
+        <p><strong>No roles found</strong></p>
+        <p>Try adjusting your search or filter criteria</p>
+      `;
+      rolesList.appendChild(noResultsDiv);
+    }
+  }
+
+  // Switch between tabs
+  function switchTab(tabName) {
+    currentTab = tabName;
+
+    // Update tab button active states
+    tabButtons.forEach(btn => {
+      if (btn.dataset.tab === tabName) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    });
+
+    // Show/hide appropriate containers
+    if (tabName === 'eligible') {
+      rolesContainer.classList.remove('hidden');
+      activeRolesContainer.classList.add('hidden');
+
+      // Stop active roles interval if running
+      if (activeRolesInterval) {
+        clearInterval(activeRolesInterval);
+        activeRolesInterval = null;
+      }
+    } else if (tabName === 'active') {
+      rolesContainer.classList.add('hidden');
+      activeRolesContainer.classList.remove('hidden');
+
+      // Load and display active roles
+      loadActiveRoles();
+
+      // Set up interval to refresh active roles every 30 seconds
+      if (activeRolesInterval) {
+        clearInterval(activeRolesInterval);
+      }
+      activeRolesInterval = setInterval(() => {
+        loadActiveRoles();
+      }, 30000); // 30 seconds
+    }
+  }
+
+  // Load active roles from both APIs
+  function loadActiveRoles() {
+    statusMessage.textContent = 'Loading active roles...';
+
+    chrome.runtime.sendMessage({ action: 'getActiveRoles' }, function(response) {
+      if (response && response.success) {
+        displayActiveRoles(response.data);
+        statusMessage.textContent = 'Active roles loaded';
+      } else {
+        showError(response?.error || 'Failed to load active roles');
+      }
+    });
+  }
+
+  // Display active roles with countdown timers
+  function displayActiveRoles(data) {
+    activeRolesList.innerHTML = '';
+
+    const activeDirectoryRoles = data.activeDirectoryRoles?.value || [];
+    const activeAzureResourceRoles = data.activeAzureResourceRoles?.value || [];
+    const errors = data.errors || [];
+
+    // Display errors if any
+    if (errors.length > 0) {
+      const errorSection = document.createElement('div');
+      errorSection.className = 'warning-section';
+      errorSection.innerHTML = '<p><strong>⚠️ Some active roles could not be loaded:</strong></p>';
+      errors.forEach(err => {
+        const errorMsg = document.createElement('p');
+        errorMsg.className = 'error-message';
+        errorMsg.textContent = `${err.type}: ${err.error}`;
+        errorSection.appendChild(errorMsg);
+      });
+      activeRolesList.appendChild(errorSection);
+    }
+
+    // Check if we have any active roles
+    if (activeDirectoryRoles.length === 0 && activeAzureResourceRoles.length === 0) {
+      activeRolesList.innerHTML += `
+        <div class="no-active-roles">
+          <div class="icon">⏸️</div>
+          <p><strong>No active roles</strong></p>
+          <p>Switch to "Eligible Roles" tab to activate roles</p>
+        </div>
+      `;
+      return;
+    }
+
+    // Display Directory Active Roles section
+    if (activeDirectoryRoles.length > 0) {
+      const directorySection = document.createElement('div');
+      directorySection.className = 'role-section';
+      directorySection.innerHTML = '<h3 class="role-section-title">🔐 Active Entra ID Roles</h3>';
+
+      activeDirectoryRoles.forEach(role => {
+        const roleCard = createActiveRoleCard(role, 'directory');
+        directorySection.appendChild(roleCard);
+      });
+
+      activeRolesList.appendChild(directorySection);
+    }
+
+    // Display Azure Resource Active Roles section
+    if (activeAzureResourceRoles.length > 0) {
+      const azureSection = document.createElement('div');
+      azureSection.className = 'role-section';
+      azureSection.innerHTML = '<h3 class="role-section-title">☁️ Active Azure Resource Roles</h3>';
+
+      activeAzureResourceRoles.forEach(role => {
+        const roleCard = createActiveRoleCard(role, 'azureResource');
+        azureSection.appendChild(roleCard);
+      });
+
+      activeRolesList.appendChild(azureSection);
+    }
+  }
+
+  // Create an active role card with countdown timer
+  function createActiveRoleCard(role, roleType) {
+    const card = document.createElement('div');
+    card.className = 'active-role-card';
+
+    let roleName, scopeInfo, endDateTime;
+
+    if (roleType === 'directory') {
+      roleName = role.roleName || role.roleDefinition?.displayName || 'Unknown Role';
+      scopeInfo = 'Directory scope';
+      endDateTime = role.endDateTime;
+    } else if (roleType === 'azureResource') {
+      roleName = role.properties?.expandedProperties?.roleDefinition?.displayName || 'Unknown Role';
+      const subscriptionName = role.subscriptionName || 'Unknown Subscription';
+      const scopeDisplay = extractScopeName(role.properties?.scope || '');
+      scopeInfo = `${subscriptionName}${scopeDisplay ? ` / ${scopeDisplay}` : ''}`;
+      endDateTime = role.properties?.endDateTime;
+    }
+
+    if (!endDateTime) {
+      // No expiration time, just show basic info
+      card.innerHTML = `
+        <div class="active-role-header">
+          <div class="active-role-name">${escapeHTML(roleName)}</div>
+          <span class="active-role-badge active">Active</span>
+        </div>
+        <div class="active-role-info">${escapeHTML(scopeInfo)}</div>
+      `;
+      return card;
+    }
+
+    // Calculate time remaining
+    const endTime = new Date(endDateTime).getTime();
+    const now = Date.now();
+    const timeRemaining = endTime - now;
+
+    // Determine if expiring soon (less than 15 minutes)
+    const isExpiringSoon = timeRemaining < 15 * 60 * 1000;
+
+    if (isExpiringSoon) {
+      card.classList.add('expiring-soon');
+    }
+
+    // Create unique ID for this card
+    const cardId = `active-role-${Math.random().toString(36).substr(2, 9)}`;
+    card.id = cardId;
+
+    card.innerHTML = `
+      <div class="active-role-header">
+        <div class="active-role-name">${escapeHTML(roleName)}</div>
+        <span class="active-role-badge ${isExpiringSoon ? 'expiring' : 'active'}">
+          ${isExpiringSoon ? '⚠️ Expiring' : 'Active'}
+        </span>
+      </div>
+      <div class="active-role-info">${escapeHTML(scopeInfo)}</div>
+      <div class="active-role-timer">
+        <div class="timer-progress-bar">
+          <div class="timer-progress-fill ${isExpiringSoon ? 'expiring-soon' : ''}" id="${cardId}-progress"></div>
+          <div class="timer-text-overlay ${isExpiringSoon ? 'expiring-soon' : ''}" id="${cardId}-timer"></div>
+        </div>
+      </div>
+    `;
+
+    // Start countdown timer after a brief delay to ensure DOM is ready
+    setTimeout(() => {
+      updateCountdown(cardId, endTime);
+    }, 10);
+
+    return card;
+  }
+
+  // Update countdown timer for a role card
+  function updateCountdown(cardId, endTime) {
+    const timerElement = document.getElementById(`${cardId}-timer`);
+    const progressElement = document.getElementById(`${cardId}-progress`);
+
+    if (!timerElement || !progressElement) return;
+
+    const updateTimer = () => {
+      const now = Date.now();
+      const timeRemaining = endTime - now;
+
+      if (timeRemaining <= 0) {
+        timerElement.textContent = 'Expired';
+        progressElement.style.width = '0%';
+        return;
+      }
+
+      // Calculate hours, minutes, seconds
+      const hours = Math.floor(timeRemaining / (1000 * 60 * 60));
+      const minutes = Math.floor((timeRemaining % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((timeRemaining % (1000 * 60)) / 1000);
+
+      // Format time string
+      let timeString = '';
+      if (hours > 0) {
+        timeString = `${hours}h ${minutes}m`;
+      } else if (minutes > 0) {
+        timeString = `${minutes}m ${seconds}s`;
+      } else {
+        timeString = `${seconds}s`;
+      }
+
+      timerElement.textContent = timeString;
+
+      // Update progress bar (assume 8 hour max duration for calculation)
+      const maxDuration = 8 * 60 * 60 * 1000; // 8 hours in milliseconds
+      const percentRemaining = Math.max(0, Math.min(100, (timeRemaining / maxDuration) * 100));
+      progressElement.style.width = `${percentRemaining}%`;
+    };
+
+    // Initial update
+    updateTimer();
+
+    // Update every second
+    const interval = setInterval(() => {
+      updateTimer();
+
+      // Stop if timer expired or card no longer exists
+      if (!document.getElementById(cardId)) {
+        clearInterval(interval);
+      }
+    }, 1000);
   }
 });

@@ -101,6 +101,11 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
       .then(data => sendResponse({ success: true, data: data }))
       .catch(error => sendResponse({ success: false, error: error.toString() }));
     return true;
+  } else if (request.action === "getActiveRoles") {
+    getActiveRoles()
+      .then(data => sendResponse({ success: true, data: data }))
+      .catch(error => sendResponse({ success: false, error: error.toString() }));
+    return true;
   } else if (request.action === "getTokenStatus") {
     getTokenStatus()
       .then(status => sendResponse({ success: true, status: status }))
@@ -402,6 +407,276 @@ async function getAllRoles() {
     return results;
   } catch (error) {
     console.error('Error getting all roles:', error);
+    throw error;
+  }
+}
+
+// Function to get active directory roles
+async function getActiveDirectoryRoles() {
+  try {
+    // Get token from storage
+    const { graphToken, tokenTimestamp } =
+      await chrome.storage.local.get(['graphToken', 'tokenTimestamp']);
+
+    if (!graphToken) {
+      throw new Error('No Microsoft Graph token found. Please visit a Microsoft service like portal.azure.com first.');
+    }
+
+    // Check if token is older than 45 minutes
+    const tokenAgeInMinutes = (Date.now() - tokenTimestamp) / (1000 * 60);
+    if (tokenAgeInMinutes > 45) {
+      throw new Error('Token may have expired. Please refresh your Microsoft service session.');
+    }
+
+    console.log('Using captured token to fetch active directory roles');
+
+    // Extract principalId from token
+    const principalId = extractPrincipalId(graphToken);
+
+    if (!principalId) {
+      throw new Error('Could not extract user ID from token. Please refresh your session.');
+    }
+
+    console.log('Using principalId:', principalId);
+
+    // Call the active role assignment requests endpoint to get activated PIM roles
+    // Note: roleAssignmentScheduleRequests with action="selfActivate" and status="Provisioned" shows active PIM roles
+    const response = await fetch(
+      `https://graph.microsoft.com/v1.0/roleManagement/directory/roleAssignmentScheduleRequests/filterByCurrentUser(on='principal')`,
+      {
+        method: "GET",
+        headers: {
+          'Authorization': `Bearer ${graphToken}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`API call failed: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+
+    // Filter for only active (provisioned) self-activated roles
+    if (data.value) {
+      data.value = data.value.filter(role =>
+        role.action === 'selfActivate' &&
+        role.status === 'Provisioned' &&
+        role.scheduleInfo?.expiration?.endDateTime // Must have an end time to be currently active
+      );
+
+      // Calculate actual end time from scheduleInfo
+      data.value = data.value.map(role => {
+        const startDateTime = role.scheduleInfo?.startDateTime;
+        const duration = role.scheduleInfo?.expiration?.duration;
+
+        if (startDateTime && duration) {
+          // Parse ISO 8601 duration (e.g., "PT5H" = 5 hours)
+          const durationMatch = duration.match(/PT(\d+)H/);
+          if (durationMatch) {
+            const hours = parseInt(durationMatch[1]);
+            const start = new Date(startDateTime);
+            const end = new Date(start.getTime() + (hours * 60 * 60 * 1000));
+            role.endDateTime = end.toISOString();
+          }
+        }
+
+        return role;
+      });
+
+      // Filter out expired roles
+      const now = new Date();
+      data.value = data.value.filter(role => {
+        if (role.endDateTime) {
+          return new Date(role.endDateTime) > now;
+        }
+        return false;
+      });
+
+      // Resolve role definition names
+      if (data.value.length > 0) {
+        const roleDefinitions = await getRoleDefinitions(graphToken);
+
+        data.value = data.value.map(role => {
+          if (role.roleDefinitionId && roleDefinitions[role.roleDefinitionId]) {
+            role.roleName = roleDefinitions[role.roleDefinitionId];
+          }
+          return role;
+        });
+      }
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error getting active directory roles:', error);
+    throw error;
+  }
+}
+
+// Function to get active Azure resource roles
+async function getActiveAzureResourceRoles() {
+  try {
+    // Get token from storage
+    const { azureManagementToken, azureManagementTokenTimestamp } =
+      await chrome.storage.local.get(['azureManagementToken', 'azureManagementTokenTimestamp']);
+
+    if (!azureManagementToken) {
+      throw new Error('No Azure Management token found. Please visit Azure Portal first.');
+    }
+
+    // Check if token is older than 45 minutes
+    const tokenAgeInMinutes = (Date.now() - azureManagementTokenTimestamp) / (1000 * 60);
+    if (tokenAgeInMinutes > 45) {
+      throw new Error('Token may have expired. Please refresh your Azure Portal session.');
+    }
+
+    console.log('Using captured token to fetch active Azure resource roles');
+
+    // Extract principalId from token
+    const principalId = extractPrincipalId(azureManagementToken);
+
+    if (!principalId) {
+      throw new Error('Could not extract user ID from token. Please refresh your session.');
+    }
+
+    console.log('Using principalId:', principalId);
+
+    // First, get all subscriptions the user has access to
+    const subscriptionsResponse = await fetch(
+      'https://management.azure.com/subscriptions?api-version=2020-01-01',
+      {
+        method: "GET",
+        headers: {
+          'Authorization': `Bearer ${azureManagementToken}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    if (!subscriptionsResponse.ok) {
+      throw new Error(`Subscriptions API call failed: ${subscriptionsResponse.status} ${subscriptionsResponse.statusText}`);
+    }
+
+    const subscriptionsData = await subscriptionsResponse.json();
+
+    if (!subscriptionsData.value || subscriptionsData.value.length === 0) {
+      return { value: [] }; // No subscriptions found
+    }
+
+    // Fetch active role assignment requests for each subscription
+    const allActiveRoles = [];
+
+    for (const subscription of subscriptionsData.value) {
+      try {
+        // Use roleAssignmentScheduleRequests to get activated PIM roles
+        const response = await fetch(
+          `https://management.azure.com/subscriptions/${subscription.subscriptionId}/providers/Microsoft.Authorization/roleAssignmentScheduleRequests?api-version=2020-10-01&$filter=asTarget()`,
+          {
+            method: "GET",
+            headers: {
+              'Authorization': `Bearer ${azureManagementToken}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+
+          if (data.value && data.value.length > 0) {
+            // Filter for only active (provisioned) self-activated roles
+            let activeRoles = data.value.filter(role =>
+              role.properties?.requestType === 'SelfActivate' &&
+              role.properties?.status === 'Provisioned'
+            );
+
+            // Calculate actual end time from scheduleInfo
+            activeRoles = activeRoles.map(role => {
+              const startDateTime = role.properties?.scheduleInfo?.startDateTime;
+              const duration = role.properties?.scheduleInfo?.expiration?.duration;
+
+              if (startDateTime && duration) {
+                // Parse ISO 8601 duration (e.g., "PT5H" = 5 hours, "PT30M" = 30 minutes)
+                const durationMatch = duration.match(/PT(?:(\d+)H)?(?:(\d+(?:\.\d+)?)M)?/);
+                if (durationMatch) {
+                  const hours = parseInt(durationMatch[1] || '0');
+                  const minutes = parseFloat(durationMatch[2] || '0');
+                  const start = new Date(startDateTime);
+                  const end = new Date(start.getTime() + (hours * 60 * 60 * 1000) + (minutes * 60 * 1000));
+
+                  if (!role.properties) role.properties = {};
+                  role.properties.endDateTime = end.toISOString();
+                }
+              }
+
+              return role;
+            });
+
+            // Filter out expired roles
+            const now = new Date();
+            activeRoles = activeRoles.filter(role => {
+              const endDateTime = role.properties?.endDateTime;
+              if (endDateTime) {
+                return new Date(endDateTime) > now;
+              }
+              return false;
+            });
+
+            // Add subscription context to each role
+            activeRoles.forEach(role => {
+              role.subscriptionId = subscription.subscriptionId;
+              role.subscriptionName = subscription.displayName;
+              role.roleType = 'azureResource'; // Mark as Azure resource role
+            });
+
+            allActiveRoles.push(...activeRoles);
+          }
+        } else {
+          console.warn(`Failed to fetch active roles for subscription ${subscription.subscriptionId}: ${response.status}`);
+        }
+      } catch (error) {
+        console.error(`Error fetching active roles for subscription ${subscription.subscriptionId}:`, error);
+      }
+    }
+
+    return { value: allActiveRoles };
+  } catch (error) {
+    console.error('Error getting active Azure resource roles:', error);
+    throw error;
+  }
+}
+
+// Function to get all active roles (both directory and Azure resource)
+async function getActiveRoles() {
+  try {
+    const results = {
+      activeDirectoryRoles: { value: [] },
+      activeAzureResourceRoles: { value: [] },
+      errors: []
+    };
+
+    // Try to get active directory roles
+    try {
+      const activeDirectoryRoles = await getActiveDirectoryRoles();
+      results.activeDirectoryRoles = activeDirectoryRoles;
+    } catch (error) {
+      console.error('Error fetching active directory roles:', error);
+      results.errors.push({ type: 'activeDirectory', error: error.toString() });
+    }
+
+    // Try to get active Azure resource roles
+    try {
+      const activeAzureResourceRoles = await getActiveAzureResourceRoles();
+      results.activeAzureResourceRoles = activeAzureResourceRoles;
+    } catch (error) {
+      console.error('Error fetching active Azure resource roles:', error);
+      results.errors.push({ type: 'activeAzureResource', error: error.toString() });
+    }
+
+    return results;
+  } catch (error) {
+    console.error('Error getting all active roles:', error);
     throw error;
   }
 }
