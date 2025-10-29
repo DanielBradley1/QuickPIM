@@ -341,3 +341,305 @@ a:hover {
   margin-bottom: 16px;
   font-style: italic;
 }
+
+/* Role Sections */
+.role-section {
+  margin-bottom: 20px;
+}
+
+.role-section-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 12px 0;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #0078d4;
+}
+
+.role-scope {
+  font-size: 12px;
+  color: #666;
+  margin-top: 4px;
+}
+
+.role-details .role-title {
+  margin-bottom: 2px;
+}
+
+.warning-section {
+  background-color: #fff4e5;
+  border-left: 4px solid #d83b01;
+  padding: 12px;
+  margin-bottom: 16px;
+  border-radius: 4px;
+}
+
+.warning-section p {
+  margin: 4px 0;
+}
+
+.warning-section .error-message {
+  font-size: 12px;
+  font-weight: normal;
+}
+
+/* Search and Filter Section */
+.search-section {
+  margin-bottom: 16px;
+  padding: 12px;
+  background-color: #f9f9f9;
+  border-radius: 6px;
+  border: 1px solid #eaeaea;
+}
+
+.search-container {
+  position: relative;
+  margin-bottom: 12px;
+}
+
+.search-input {
+  width: 100%;
+  padding: 10px 36px 10px 12px;
+  border: 2px solid #d2d2d2;
+  border-radius: 4px;
+  font-size: 14px;
+  font-family: inherit;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #0078d4;
+  background-color: #fff;
+}
+
+.search-input::placeholder {
+  color: #999;
+}
+
+.btn-clear-search {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: #666;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.btn-clear-search:hover {
+  background-color: #e1dfdd;
+  color: #333;
+}
+
+.filter-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.filter-chip {
+  padding: 6px 14px;
+  border: 1px solid #d2d2d2;
+  background-color: #fff;
+  border-radius: 20px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+.filter-chip:hover {
+  background-color: #f3f2f1;
+  border-color: #0078d4;
+}
+
+.filter-chip.active {
+  background-color: #0078d4;
+  color: #fff;
+  border-color: #0078d4;
+}
+
+.search-results-count {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #666;
+  font-style: italic;
+}
+
+.no-results-message {
+  text-align: center;
+  padding: 40px 20px;
+  color: #666;
+  font-style: italic;
+}
+
+.no-results-message .icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+  opacity: 0.5;
+}
+
+/* Tab Navigation */
+.tab-container {
+  display: flex;
+  gap: 0;
+  margin-bottom: 16px;
+  border-bottom: 2px solid #eaeaea;
+}
+
+.tab-button {
+  flex: 1;
+  padding: 12px 16px;
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  color: #666;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tab-button:hover {
+  color: #0078d4;
+  background-color: #f9f9f9;
+}
+
+.tab-button.active {
+  color: #0078d4;
+  border-bottom-color: #0078d4;
+  background-color: #fff;
+}
+
+/* Active Roles */
+.active-role-card {
+  background-color: #fff;
+  border: 1px solid #d2d2d2;
+  border-left: 4px solid #0078d4;
+  border-radius: 4px;
+  padding: 12px;
+  margin-bottom: 12px;
+  transition: box-shadow 0.2s;
+}
+
+.active-role-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.active-role-card.expiring-soon {
+  border-left-color: #d83b01;
+  background-color: #fff4e5;
+}
+
+.active-role-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.active-role-name {
+  font-weight: 600;
+  color: #333;
+  font-size: 14px;
+  flex: 1;
+}
+
+.active-role-badge {
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  margin-left: 8px;
+}
+
+.active-role-badge.active {
+  background-color: #dff6dd;
+  color: #107c10;
+}
+
+.active-role-badge.expiring {
+  background-color: #fed9cc;
+  color: #d83b01;
+}
+
+.active-role-info {
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 4px;
+}
+
+.active-role-timer {
+  margin-top: 8px;
+}
+
+.timer-progress-bar {
+  position: relative;
+  height: 24px;
+  background-color: #e1dfdd;
+  border-radius: 4px;
+  overflow: visible;
+}
+
+.timer-progress-fill {
+  height: 100%;
+  background-color: #0078d4;
+  border-radius: 4px;
+  transition: width 1s linear, background-color 0.3s;
+}
+
+.timer-progress-fill.expiring-soon {
+  background-color: #d83b01;
+}
+
+.timer-text-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+}
+
+.timer-text-overlay.expiring-soon {
+  color: #ffffff;
+}
+
+.timer-text {
+  font-size: 12px;
+  font-weight: 600;
+  color: #333;
+  min-width: 80px;
+  text-align: right;
+}
+
+.timer-text.expiring-soon {
+  color: #d83b01;
+}
+
+.no-active-roles {
+  text-align: center;
+  padding: 40px 20px;
+  color: #666;
+  font-style: italic;
+}
+
+.no-active-roles .icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+  opacity: 0.5;
+}
