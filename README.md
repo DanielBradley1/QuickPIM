@@ -4,21 +4,21 @@
 [![LinkedIn: Daniel Bradley](https://img.shields.io/badge/LinkedIn-Daniel%20Bradley-blue?style=flat-square&logo=linkedin)](https://www.linkedin.com/in/danielbradley2/) 
 [![Website](https://img.shields.io/badge/Blog-Our%20Cloud%20Network-orange?style=flat-square&logo=internet-explorer)](https://ourcloudnetwork.com/)
 
-A Chrome extension that allows you to activate multiple PIM (Privileged Identity Management) roles simultaneously in Microsoft Entra.
+A Chrome extension that allows you to activate multiple PIM (Privileged Identity Management) roles simultaneously in Microsoft Entra and Azure resources.
 
 ## Overview
 
-QuickPIM streamlines the process of activating multiple PIM roles in Azure AD. Instead of activating each role individually, this extension allows you to select and activate multiple roles at once, saving time and reducing administrative overhead.
+QuickPIM streamlines the process of activating multiple PIM roles in Microsoft Entra and Azure subscriptions. Instead of activating each role individually, this extension allows you to select and activate multiple roles at once, saving time and reducing administrative overhead.
 
 <p align="left">
   <img src="preview/QuickPIM1.png" alt="QuickPIM Interface" width="600">
 </p>
 
-It works by obtaining a bearer token from the header of your browser's requests to Microsoft Graph. It then stores that token within your Chrome storage and uses it to obtain and activate your selected PIM roles.
+It works by obtaining bearer tokens from your browser's requests to Microsoft Graph and Azure Management APIs. It then stores those tokens within your Chrome storage and uses them to obtain and activate your selected PIM roles.
 
 ## Features
 
-- Activate multiple PIM roles simultaneously
+- Activate multiple PIM roles simultaneously (Entra ID and Azure resources)
 - Customisable activation duration
 - Simple and intuitive user interface
 - Secure authentication using existing browser bearer token
@@ -39,7 +39,7 @@ https://github.com/DanielBradley1/MiToken
 
 ## Usage
 
-1. Open the Microsoft Entra portal and click around briefly 
+1. Open the Microsoft Entra portal and click around briefly
 2. Click on the QuickPIM icon in your Chrome toolbar
 3. Select the roles you want to activate from the displayed list
 4. Set the activation duration (optional)
