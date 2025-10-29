@@ -569,9 +569,9 @@ async function getActiveAzureResourceRoles() {
 
     for (const subscription of subscriptionsData.value) {
       try {
-        // Use roleAssignmentScheduleRequests to get activated PIM roles
+        // Use roleAssignmentScheduleInstances to get currently active PIM role assignments
         const response = await fetch(
-          `https://management.azure.com/subscriptions/${subscription.subscriptionId}/providers/Microsoft.Authorization/roleAssignmentScheduleRequests?api-version=2020-10-01&$filter=asTarget()`,
+          `https://management.azure.com/subscriptions/${subscription.subscriptionId}/providers/Microsoft.Authorization/roleAssignmentScheduleInstances?api-version=2020-10-01&$filter=asTarget()`,
           {
             method: "GET",
             headers: {
@@ -585,32 +585,14 @@ async function getActiveAzureResourceRoles() {
           const data = await response.json();
 
           if (data.value && data.value.length > 0) {
-            // Filter for only active (provisioned) self-activated roles
-            let activeRoles = data.value.filter(role =>
-              role.properties?.requestType === 'SelfActivate' &&
-              role.properties?.status === 'Provisioned'
-            );
-
-            // Calculate actual end time from scheduleInfo
-            activeRoles = activeRoles.map(role => {
-              const startDateTime = role.properties?.scheduleInfo?.startDateTime;
-              const duration = role.properties?.scheduleInfo?.expiration?.duration;
-
-              if (startDateTime && duration) {
-                // Parse ISO 8601 duration (e.g., "PT5H" = 5 hours, "PT30M" = 30 minutes)
-                const durationMatch = duration.match(/PT(?:(\d+)H)?(?:(\d+(?:\.\d+)?)M)?/);
-                if (durationMatch) {
-                  const hours = parseInt(durationMatch[1] || '0');
-                  const minutes = parseFloat(durationMatch[2] || '0');
-                  const start = new Date(startDateTime);
-                  const end = new Date(start.getTime() + (hours * 60 * 60 * 1000) + (minutes * 60 * 1000));
-
-                  if (!role.properties) role.properties = {};
-                  role.properties.endDateTime = end.toISOString();
-                }
-              }
-
-              return role;
+            // Filter for only active PIM assignments (those with assignmentType indicating PIM activation)
+            let activeRoles = data.value.filter(role => {
+              // Check if this is a time-bound assignment (PIM activation)
+              const endDateTime = role.properties?.endDateTime;
+              const assignmentType = role.properties?.assignmentType;
+              
+              // Include if it has an end date (time-bound = PIM) or is marked as "Activated"
+              return endDateTime || assignmentType === 'Activated';
             });
 
             // Filter out expired roles
@@ -620,7 +602,8 @@ async function getActiveAzureResourceRoles() {
               if (endDateTime) {
                 return new Date(endDateTime) > now;
               }
-              return false;
+              // Keep roles without endDateTime (permanent assignments)
+              return true;
             });
 
             // Add subscription context to each role
@@ -669,11 +652,13 @@ async function getActiveRoles() {
     try {
       const activeAzureResourceRoles = await getActiveAzureResourceRoles();
       results.activeAzureResourceRoles = activeAzureResourceRoles;
+      console.log('Active Azure Resource Roles fetched:', activeAzureResourceRoles);
     } catch (error) {
       console.error('Error fetching active Azure resource roles:', error);
       results.errors.push({ type: 'activeAzureResource', error: error.toString() });
     }
 
+    console.log('getActiveRoles returning:', results);
     return results;
   } catch (error) {
     console.error('Error getting all active roles:', error);

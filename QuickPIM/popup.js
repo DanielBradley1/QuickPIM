@@ -237,6 +237,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Hide all dynamic content sections
     noTokenView.classList.add('hidden');
     rolesContainer.classList.add('hidden');
+    activeRolesContainer.classList.add('hidden');
     errorContainer.classList.add('hidden');
     
     // Check if we have a valid token
@@ -245,7 +246,14 @@ document.addEventListener('DOMContentLoaded', function() {
         updateTokenStatus(response.status);
         
         if (response.status.hasToken && !response.status.isExpired) {
-          loadRoles();
+          // Load content based on current tab
+          if (currentTab === 'active') {
+            activeRolesContainer.classList.remove('hidden');
+            loadActiveRoles();
+          } else {
+            rolesContainer.classList.remove('hidden');
+            loadRoles();
+          }
         } else {
           noTokenView.classList.remove('hidden');
           statusMessage.textContent = 'No valid token';
@@ -536,6 +544,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // Filter roles based on search term and filter type
   function filterRoles() {
     const allRoleItems = document.querySelectorAll('.role-item');
+    const allRoleSections = document.querySelectorAll('.role-section');
     let visibleCount = 0;
     let totalCount = allRoleItems.length;
 
@@ -567,6 +576,32 @@ document.addEventListener('DOMContentLoaded', function() {
 
       if (shouldShow) {
         visibleCount++;
+      }
+    });
+
+    // Show/hide role section headings based on filter
+    allRoleSections.forEach(section => {
+      const sectionTitle = section.querySelector('.role-section-title');
+      if (sectionTitle) {
+        const titleText = sectionTitle.textContent;
+        
+        // Hide Entra ID section when Azure Resource filter is active
+        if (currentFilter === 'azureResource' && titleText.includes('Entra ID')) {
+          section.style.display = 'none';
+        }
+        // Hide Azure Resource section when Entra ID filter is active
+        else if (currentFilter === 'directory' && titleText.includes('Azure Resource')) {
+          section.style.display = 'none';
+        }
+        // Show all sections when 'all' filter is active
+        else if (currentFilter === 'all') {
+          section.style.display = '';
+        }
+        // For other cases, check if section has any visible roles
+        else {
+          const visibleRolesInSection = section.querySelectorAll('.role-item:not([style*="display: none"])');
+          section.style.display = visibleRolesInSection.length > 0 ? '' : 'none';
+        }
       }
     });
 
@@ -669,6 +704,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const activeDirectoryRoles = data.activeDirectoryRoles?.value || [];
     const activeAzureResourceRoles = data.activeAzureResourceRoles?.value || [];
     const errors = data.errors || [];
+
+    // Debug logging
+    console.log('Active Directory Roles count:', activeDirectoryRoles.length);
+    console.log('Active Azure Resource Roles count:', activeAzureResourceRoles.length);
+    console.log('Active Azure Resource Roles data:', activeAzureResourceRoles);
+    console.log('Errors:', errors);
 
     // Display errors if any
     if (errors.length > 0) {
