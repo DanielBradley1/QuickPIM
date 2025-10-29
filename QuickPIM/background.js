@@ -14,30 +14,68 @@ chrome.webRequest.onBeforeRequest.addListener(
   {urls: ["https://graph.microsoft.com/*"]}
 );
 
+// Listen for web requests to Azure Management API
+chrome.webRequest.onBeforeRequest.addListener(
+  function(details) {
+    if (details.url.includes('management.azure.com')) {
+      // We found a request to Management API
+      captureAuthToken(details.requestId, details.url);
+    }
+  },
+  {urls: ["https://management.azure.com/*"]}
+);
+
 // Capture authentication token from request headers
 chrome.webRequest.onSendHeaders.addListener(
   function(details) {
     if (details.url.includes('graph.microsoft.com')) {
-      const authHeader = details.requestHeaders.find(header => 
+      const authHeader = details.requestHeaders.find(header =>
         header.name.toLowerCase() === 'authorization'
       );
-      
+
       if (authHeader && authHeader.value.startsWith('Bearer ')) {
         // Extract the token (remove "Bearer " prefix)
         const token = authHeader.value.substring(7);
-        
+
         // Store the token
-        chrome.storage.local.set({ 
+        chrome.storage.local.set({
           graphToken: token,
           tokenTimestamp: Date.now(),
           tokenSource: details.url
         });
-        
+
         console.log('Graph API token captured!');
       }
     }
   },
   {urls: ["https://graph.microsoft.com/*"]},
+  ["requestHeaders"]
+);
+
+// Capture Azure Management API token from request headers
+chrome.webRequest.onSendHeaders.addListener(
+  function(details) {
+    if (details.url.includes('management.azure.com')) {
+      const authHeader = details.requestHeaders.find(header =>
+        header.name.toLowerCase() === 'authorization'
+      );
+
+      if (authHeader && authHeader.value.startsWith('Bearer ')) {
+        // Extract the token (remove "Bearer " prefix)
+        const token = authHeader.value.substring(7);
+
+        // Store the Azure Management token separately
+        chrome.storage.local.set({
+          azureManagementToken: token,
+          azureManagementTokenTimestamp: Date.now(),
+          azureManagementTokenSource: details.url
+        });
+
+        console.log('Azure Management API token captured!');
+      }
+    }
+  },
+  {urls: ["https://management.azure.com/*"]},
   ["requestHeaders"]
 );
 
@@ -53,6 +91,16 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
       .then(data => sendResponse({ success: true, data: data }))
       .catch(error => sendResponse({ success: false, error: error.toString() }));
     return true; // Indicates async response
+  } else if (request.action === "getAzureResourceRoles") {
+    getAzureResourceRoles()
+      .then(data => sendResponse({ success: true, data: data }))
+      .catch(error => sendResponse({ success: false, error: error.toString() }));
+    return true;
+  } else if (request.action === "getAllRoles") {
+    getAllRoles()
+      .then(data => sendResponse({ success: true, data: data }))
+      .catch(error => sendResponse({ success: false, error: error.toString() }));
+    return true;
   } else if (request.action === "getTokenStatus") {
     getTokenStatus()
       .then(status => sendResponse({ success: true, status: status }))
@@ -226,6 +274,134 @@ async function setManualToken(token) {
 
 // Function to clear the stored token
 async function clearToken() {
-  await chrome.storage.local.remove(['graphToken', 'tokenTimestamp', 'tokenSource']);
+  await chrome.storage.local.remove(['graphToken', 'tokenTimestamp', 'tokenSource', 'azureManagementToken', 'azureManagementTokenTimestamp', 'azureManagementTokenSource']);
   return true;
+}
+
+// Function to get Azure resource PIM roles using the Azure Management token
+async function getAzureResourceRoles() {
+  try {
+    // Get token from storage
+    const { azureManagementToken, azureManagementTokenTimestamp } =
+      await chrome.storage.local.get(['azureManagementToken', 'azureManagementTokenTimestamp']);
+
+    if (!azureManagementToken) {
+      throw new Error('No Azure Management token found. Please visit Azure Portal first.');
+    }
+
+    // Check if token is older than 45 minutes
+    const tokenAgeInMinutes = (Date.now() - azureManagementTokenTimestamp) / (1000 * 60);
+    if (tokenAgeInMinutes > 45) {
+      throw new Error('Token may have expired. Please refresh your Azure Portal session.');
+    }
+
+    console.log('Using captured token to fetch Azure resource PIM roles');
+
+    // Extract principalId from token
+    const principalId = extractPrincipalId(azureManagementToken);
+
+    if (!principalId) {
+      throw new Error('Could not extract user ID from token. Please refresh your session.');
+    }
+
+    console.log('Using principalId:', principalId);
+
+    // First, get all subscriptions the user has access to
+    const subscriptionsResponse = await fetch(
+      'https://management.azure.com/subscriptions?api-version=2020-01-01',
+      {
+        method: "GET",
+        headers: {
+          'Authorization': `Bearer ${azureManagementToken}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    if (!subscriptionsResponse.ok) {
+      throw new Error(`Subscriptions API call failed: ${subscriptionsResponse.status} ${subscriptionsResponse.statusText}`);
+    }
+
+    const subscriptionsData = await subscriptionsResponse.json();
+
+    if (!subscriptionsData.value || subscriptionsData.value.length === 0) {
+      return { value: [] }; // No subscriptions found
+    }
+
+    // Fetch role eligibility for each subscription
+    const allRoles = [];
+
+    for (const subscription of subscriptionsData.value) {
+      try {
+        const response = await fetch(
+          `https://management.azure.com/subscriptions/${subscription.subscriptionId}/providers/Microsoft.Authorization/roleEligibilityScheduleInstances?api-version=2020-10-01&$filter=asTarget()`,
+          {
+            method: "GET",
+            headers: {
+              'Authorization': `Bearer ${azureManagementToken}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+
+          if (data.value && data.value.length > 0) {
+            // Add subscription context to each role
+            data.value.forEach(role => {
+              role.subscriptionId = subscription.subscriptionId;
+              role.subscriptionName = subscription.displayName;
+              role.roleType = 'azureResource'; // Mark as Azure resource role
+            });
+
+            allRoles.push(...data.value);
+          }
+        } else {
+          console.warn(`Failed to fetch roles for subscription ${subscription.subscriptionId}: ${response.status}`);
+        }
+      } catch (error) {
+        console.error(`Error fetching roles for subscription ${subscription.subscriptionId}:`, error);
+      }
+    }
+
+    return { value: allRoles };
+  } catch (error) {
+    console.error('Error getting Azure resource PIM roles:', error);
+    throw error;
+  }
+}
+
+// Function to get all roles (both directory and Azure resource roles)
+async function getAllRoles() {
+  try {
+    const results = {
+      directoryRoles: { value: [] },
+      azureResourceRoles: { value: [] },
+      errors: []
+    };
+
+    // Try to get directory roles
+    try {
+      const directoryRoles = await getPimRoles();
+      results.directoryRoles = directoryRoles;
+    } catch (error) {
+      console.error('Error fetching directory roles:', error);
+      results.errors.push({ type: 'directory', error: error.toString() });
+    }
+
+    // Try to get Azure resource roles
+    try {
+      const azureResourceRoles = await getAzureResourceRoles();
+      results.azureResourceRoles = azureResourceRoles;
+    } catch (error) {
+      console.error('Error fetching Azure resource roles:', error);
+      results.errors.push({ type: 'azureResource', error: error.toString() });
+    }
+
+    return results;
+  } catch (error) {
+    console.error('Error getting all roles:', error);
+    throw error;
+  }
 }
