@@ -27,7 +27,7 @@ It works by obtaining bearer tokens from your browser's requests to Microsoft Gr
 ## Installation
 
 ### From Chrome Web Store
-1. Visit the [QuickPIM extension page](https://chrome.google.com/webstore/detail/quickpim/[extension-id]) on the Chrome Web Store (***waiting approval***)
+1. Visit the [QuickPIM extension page](https://chromewebstore.google.com/detail/quickpim/gnhcemgacdhjljehgcnnjglhkegebikb) on the Chrome Web Store
 2. Click "Add to Chrome"
 3. Confirm the installation when prompted
 https://github.com/DanielBradley1/MiToken
