@@ -463,7 +463,7 @@ async function getActiveDirectoryRoles() {
       data.value = data.value.filter(role =>
         role.action === 'selfActivate' &&
         role.status === 'Provisioned' &&
-        role.scheduleInfo?.expiration?.endDateTime // Must have an end time to be currently active
+        role.scheduleInfo?.expiration?.duration // Must have a duration to calculate end time
       );
 
       // Calculate actual end time from scheduleInfo
